@@ -1,0 +1,105 @@
+﻿@model LoginViewModel
+@{
+    Layout = null;
+    ViewData["Title"] = "登录";
+}
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>@ViewData["Title"]</title>
+    <link href="~/lib/element-ui/lib/theme-chalk/index.css" rel="stylesheet" />
+    <link href="~/css/AdminLTE.css" rel="stylesheet" />
+    <link href="~/lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+    <link href="~/lib/iCheck/skins/all.css" rel="stylesheet" />
+    <script src="~/lib/jquery/dist/jquery.js"></script>
+    <script src="~/lib/vue/vue.js"></script>
+    <script src="~/lib/element-ui/lib/index.js"></script>
+    <script src="~/lib/iCheck/icheck.js"></script>
+</head>
+<body class="hold-transition login-page">
+    <div class="login-box" id="app">
+        <div class="login-logo">
+            @ViewData["Title"]
+        </div>
+        <!-- /.login-logo -->
+        <div class="login-box-body">
+            <p class="login-box-msg">登录后开始使用系统</p>
+            <el-form asp-route-returnurl="@ViewData["ReturnUrl"]" method="post" :rules="rules"
+                     @@submit.native.prevent="submit()" id="myForm" :model="loginViewModel" ref="loginForm">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="All" class="text-danger"></div>
+                <div class="form-group has-feedback">
+                    <el-form-item prop="UserName"> 
+                        <el-input v-model="loginViewModel.UserName" placeholder="请输入用户名" asp-for="UserName"
+                                  prefix-icon="glyphicon glyphicon-user">
+                        </el-input>
+                        <input type="hidden" asp-for="UserName" v-model="loginViewModel.UserName" />
+                    </el-form-item>
+                </div>
+                <div class="form-group has-feedback">
+                    <el-form-item prop="Password">
+                        <el-input v-model="loginViewModel.Password" placeholder="请输入密码" type="password"
+                                  prefix-icon="glyphicon glyphicon-lock">
+                        </el-input>
+                        <input type="hidden" asp-for="Password" v-model="loginViewModel.Password" />
+                    </el-form-item>
+                </div>
+                <div class="row">
+                    <div class="col-xs-8">
+                        <div class="checkbox icheck">
+                            <input type="checkbox" asp-for="RememberMe" id="remeberMe">&nbsp;&nbsp;@Html.DisplayNameFor(m => m.RememberMe)
+                        </div>
+                    </div>
+                    <div class="col-xs-4">
+                        <el-button type="primary" :loading="loading" native-type="submit">登录</el-button>
+                    </div>
+                </div>
+            </el-form>
+            <a asp-action="ForgotPassword">忘记密码？</a><br>
+        </div>
+    </div>
+    @section Scripts {
+        @await Html.PartialAsync("_ValidationScriptsPartial")
+    }
+    <script type="text/javascript">
+        $(function () {
+            $('input').iCheck({
+                checkboxClass: 'icheckbox_square-blue'
+            })
+        })
+
+        var vm = new Vue({
+            el: "#app",
+            data: {
+                loginViewModel: {
+                    UserName: '',
+                    Password: '',
+                },
+                rules: {
+                    UserName: [
+                        { required: true, message: '请输入用户名', trigger: 'blur' },
+                    ],
+                    Password: [
+                        { required: true, message: '请输入密码', trigger: 'blur' }
+                    ],
+                },
+                loading: false
+            },
+            methods: {
+                submit: function () {
+                    this.$refs.loginForm.validate((valid) => {
+                        if (valid) {
+                            this.loading = true;
+                            $("#myForm").submit();
+                        } else {
+                            return false;
+                        }
+                    })
+                }
+            }
+        });
+    </script>
+</body>
+</html>

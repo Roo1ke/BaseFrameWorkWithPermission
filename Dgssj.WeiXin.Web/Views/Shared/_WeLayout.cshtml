@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>暖通舒适家</title>
+    <link href="~/lib/we-vue/lib/style.css" rel="stylesheet" />
+    <link href="~/lib/we-vue/src/style/empty.css" rel="stylesheet" />
+    <link href="~/css/help.css" rel="stylesheet" />
+    <link href="~/lib/mintui/lib/style.css" rel="stylesheet" />
+    <link href="~/lib/font-awesome-4.7.0/css/font-awesome.css" rel="stylesheet" />
+    <link href="~/css/mescroll.css" rel="stylesheet" />
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/vue/vue.min.js"></script>
+    <script src="~/lib/vue/vue-resource.min.js"></script>
+    <script src="~/lib/we-vue/lib/index.js"></script>
+    <script src="~/lib/mintui/lib/index.js"></script>
+    <script src="~/js/mescroll.js"></script>
+</head>
+<body>
+    <div>
+        @RenderBody()
+    </div>
+    <div id="help">
+        <loading v-show="showLoading"></loading>
+    </div>
+    <template id="loading-template">
+        <div class="loading-overlay">
+            <div class="sk-three-bounce">
+                <div class="sk-child sk-bounce1"></div>
+                <div class="sk-child sk-bounce2"></div>
+                <div class="sk-child sk-bounce3"></div>
+            </div>
+        </div>
+    </template>
+    <script>
+        var help = new Vue({
+            el: '#help',
+            data: {
+                showLoading: false
+            },
+            components: {
+                'loading': {
+                    template: '#loading-template',
+                }
+            }
+        });
+        Vue.http.interceptors.push((request, next) => {
+            help.showLoading = true
+            next((response) => {
+                help.showLoading = false
+                return response
+            });
+        });
+    </script>
+</body>
+</html>

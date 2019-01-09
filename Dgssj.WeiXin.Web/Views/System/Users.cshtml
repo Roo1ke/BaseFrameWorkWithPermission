@@ -1,0 +1,485 @@
+﻿
+@{
+    ViewData["Title"] = "用户管理";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<style>
+    .chx {
+        margin-left: 30px;
+    }
+</style>
+<section id="users">
+    <el-card class="box-card">
+        <div slot="header" class="clearfix">
+            <el-form :inline="true" class="demo-form-inline">
+                <el-form-item label="姓名">
+                    <el-input placeholder="输入用户姓名" v-model="parm.RealName"></el-input>
+                </el-form-item>
+                @*<el-form-item label="活动区域">
+                        <el-select v-model="item.k" placeholder="活动区域">
+                            <el-option label="区域一" value="shanghai"></el-option>
+                            <el-option label="区域二" value="beijing"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="时间范围">
+                        <el-date-picker v-model="value7"
+                                        type="daterange"
+                                        align="right"
+                                        unlink-panels
+                                        range-separator="至"
+                                        start-placeholder="开始日期"
+                                        end-placeholder="结束日期"
+                                        :picker-options="pickerOptions2">
+                        </el-date-picker>
+                    </el-form-item>*@
+                <el-form-item>
+                    <el-button type="primary" icon="el-icon-search" @@click="search">查询</el-button>
+                    <el-button type="success" icon="el-icon-plus" @@click="add">新增</el-button>
+                    <el-button type="danger" icon="el-icon-delete" @@click="deleteMore">批量删除</el-button>
+                </el-form-item>
+            </el-form>
+        </div>
+        <el-table ref="multipleTable" v-loading="loading" border
+                  :data="tableData3.slice((currPage-1)*pagesize,currPage*pagesize)"
+                  tooltip-effect="dark" :default-sort="{prop:'date', order:'descending'}"
+                  style="width: 100%"
+                  @@selection-change="handleSelectionChange">
+            <el-table-column type="selection" width="55"></el-table-column>
+            <el-table-column label="ID" width="60" prop="ID" sortable>
+            </el-table-column>
+            <el-table-column prop="UserName" label="用户名">
+            </el-table-column>
+            <el-table-column label="姓名" prop="RealName">
+            </el-table-column>
+            <el-table-column label="性别">
+                <template slot-scope="scope">
+                    <span>{{ scope.row.Sex==1?"男":"女"}}</span>
+                </template>
+            </el-table-column>
+            <el-table-column label="电话" prop="Phone">
+            </el-table-column>
+            <el-table-column label="状态">
+                <template slot-scope="scope">
+                    <span>{{ scope.row.Status==0?"启用":"未启用"}}</span>
+                </template>
+            </el-table-column>
+            <el-table-column label="创建时间">
+                <template slot-scope="scope">
+                    <span>{{ scope.row.CreateTime|formatDate}}</span>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作">
+                <template slot-scope="scope">
+                    <a href="#" @@click="edit(scope.row)">编辑 </a>&nbsp;
+                    <a href="#" @@click="deleteOne(scope.row)">删除 </a>&nbsp;
+                    <a href="#" @@click="setRole(scope.row)" title="设置用户的系统角色">角色 </a>&nbsp;
+                    <a href="#" @@click="resetPwd(scope.row)">重置密码 </a>&nbsp;
+                </template>
+            </el-table-column>
+        </el-table>
+        <br />
+        <div class="block">
+            <el-pagination @@size-change="handleSizeChange"
+                           @@current-change="handleCurrentChange"
+                           :current-page="currPage"
+                           :page-sizes="[5, 10,20]"
+                           :page-size="pagesize"
+                           layout="total, sizes, prev, pager, next, jumper"
+                           :total="tableData3.length">
+            </el-pagination>
+        </div>
+    </el-card>
+    <el-dialog :title="dialogTitle" :visible.sync="dialogFormVisible" width="30%" :close-on-click-modal="false">
+        <el-form ref="form" :model="item" label-width="80px" size="mini" :rules="rules">
+            <el-form-item label="用户名" prop="UserName">
+                <el-input v-model="item.UserName" :readonly="isEdit"></el-input>
+            </el-form-item>
+            <el-form-item label="姓名" prop="RealName">
+                <el-input v-model="item.RealName"></el-input>
+            </el-form-item>
+            <el-form-item label="性别">
+                <el-radio-group v-model="item.Sex">
+                    <el-radio label=1>男</el-radio>
+                    <el-radio label=2>女</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="电话号码">
+                <el-input v-model="item.Phone"></el-input>
+            </el-form-item>
+            <el-form-item label="立即启用" prop="delivery">
+                <el-switch v-model="status"></el-switch>
+            </el-form-item>
+            <el-form-item label="备注">
+                <el-input type="textarea" v-model="item.Remark"></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @@click="dialogFormVisible=false">关 闭</el-button>
+            <el-button type="primary" @@click="submit" :loading="submitLoading">提 交</el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="用户角色设置" :visible.sync="showRolesSetting" width="30%" :close-on-click-modal="false">
+        <el-form label-width="80px" size="mini" form-inline>
+            <el-checkbox-group v-model="roleIDS" size="small">
+                <el-checkbox v-for="(im,index) in roleList" :label="im.ID" :key="index" :class="{chx:index==0}">{{im.RoleName}}</el-checkbox>
+            </el-checkbox-group>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @@click="showRolesSetting=false">关 闭</el-button>
+            <el-button type="primary" @@click="submitSetting" :loading="submit2Loading">提 交</el-button>
+        </div>
+    </el-dialog>
+</section>
+<script type="text/javascript">
+    var padDate = function (va) {
+        va = va < 10 ? '0' + va : va;
+        return va
+    }
+    Vue.http.options.emulateJSON = true;
+    var vm_user = new Vue({
+        el: "#users",
+        data: {
+            tableData3: [],
+            parm: {},
+            multipleSelection: [],
+            currPage: 1,
+            pagesize: 10,
+            loading: false,
+            pickerOptions2: {
+                shortcuts: [{
+                    text: '最近一周',
+                    onClick(picker) {
+                        const end = new Date();
+                        const start = new Date();
+                        start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+                        picker.$emit('pick', [start, end]);
+                    }
+                }, {
+                    text: '最近一个月',
+                    onClick(picker) {
+                        const end = new Date();
+                        const start = new Date();
+                        start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
+                        picker.$emit('pick', [start, end]);
+                    }
+                }, {
+                    text: '最近三个月',
+                    onClick(picker) {
+                        const end = new Date();
+                        const start = new Date();
+                        start.setTime(start.getTime() - 3600 * 1000 * 24 * 90);
+                        picker.$emit('pick', [start, end]);
+                    }
+                }]
+            },
+            dialogFormVisible: false,
+            submit2Loading: false,
+            showRolesSetting: false,
+            item: {},
+            dialogTitle: "",
+            submitLoading: false,
+            status: false,
+            isEdit: false,
+            rules: {
+                UserName: [
+                    {
+                        validator: (rule, value, callback) => {
+                            if (vm_user.isEdit == true) {
+                                callback();
+                            }
+                            if (!value) {
+                                return callback(new Error('用户名不能为空'));
+                            }
+                            var self = this;
+                            var params = new URLSearchParams()
+                            params.append('username', vm_user.item.UserName)
+                            axios.post('/System/CheckUserName', params).then(function (response) {
+                                if (response.data.Code == 0) {
+                                    callback();
+                                }
+                                else {
+                                    callback(new Error(response.data.Message))
+                                }
+                            }).catch(function (err) {
+                                self.$message({
+                                    type: 'error',
+                                    message: '服务异常，可能是网络原因造成'
+                                });
+                                console.log(err);
+                            })
+                        },
+                        trigger: 'blur'
+                    },
+                ],
+                RealName: [{ required: true, message: '姓名不能为空', trigger: 'blur' }]
+            },
+            roleList: [],
+            roleIDS: [],
+            currUserID: ""
+
+        },
+        methods: {
+            //批量删除
+            deleteMore() {
+                if (this.multipleSelection == 0) {
+                    this.$message.error('请先选择要删除的条目');
+                    return;
+                }
+                this.$confirm('此操作将删除这些数据, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    var self = this;
+                    self.$http.post('/System/DeleteUsers', { list: self.multipleSelection }).then(function (response) {
+                        if (response.data.Code == 0) {
+                            self.$message({
+                                type: 'success',
+                                message: response.data.Message
+                            });
+                            self.getList();
+                        }
+                        else {
+                            self.$message({
+                                type: 'error',
+                                message: response.data.Message
+                            });
+                        }
+                    }).catch(function (err) {
+                        self.$message({
+                            type: 'error',
+                            message: '服务异常，可能是网络原因造成'
+                        });
+                        console.log(err);
+                    });
+                }).catch(() => {
+
+                });
+            },
+            deleteOne(obj) {
+                this.$confirm('此操作将删除该用户数据, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    var list = [];
+                    var self = this;
+                    list.push(obj);
+                    self.$http.post('/System/DeleteUsers', { list: list }).then(function (response) {
+                        if (response.data.Code == 0) {
+                            self.$message({
+                                type: 'success',
+                                message: response.data.Message
+                            });
+                            self.getList();
+                        }
+                        else {
+                            self.$message({
+                                type: 'error',
+                                message: response.data.Message
+                            });
+                        }
+                    }).catch(function (err) {
+                        self.$message({
+                            type: 'error',
+                            message: '服务异常，可能是网络原因造成'
+                        });
+                        console.log(err);
+                    });
+                }).catch(() => {
+
+                });
+            },
+            //checkbox选中事件
+            handleSelectionChange(val) {
+                this.multipleSelection = val;
+            },
+            //改变PageSize
+            handleSizeChange(size) {
+                this.pagesize = size;
+            },
+            //翻页
+            handleCurrentChange(currentPage) {
+                this.currPage = currentPage;
+            },
+            //新增
+            add() {
+                this.isEdit = false;
+                this.dialogFormVisible = true;
+                this.$nextTick(() => {
+                    this.dialogTitle = "添加用户";
+                    this.$refs['form'].resetFields(); //此方法需要模态框加载完成后才可以执行
+                    this.item = {
+                        Sex: "1",
+                    };
+                    this.status = false;
+                })
+            },
+            //修改
+            edit(obj) {
+                this.isEdit = true;
+
+                this.dialogFormVisible = true;
+                this.$nextTick(() => {
+                    this.$refs['form'].resetFields(); //此方法需要模态框加载完成后才可以执行
+                    this.dialogTitle = "编辑用户";
+                    this.item = JSON.parse(JSON.stringify(obj));
+                    this.item.Sex = this.item.Sex == 1 ? "1" : "2";
+                    this.status = this.item.Status == 0
+                })
+            },
+            //重置密码
+            resetPwd(obj) {
+                this.$confirm('此操作将重置该用户密码, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    var self = this;
+                    self.$http.post('/System/ResetPwd', { userID: obj.ID }).then(function (response) {
+                        if (response.data.Code == 0) {
+                            self.$message({
+                                type: 'success',
+                                message: response.data.Message
+                            });
+                        }
+                        else {
+                            self.$message({
+                                type: 'error',
+                                message: response.data.Message
+                            });
+                        }
+                    }).catch(function (err) {
+                        self.$message({
+                            type: 'error',
+                            message: '服务异常，可能是网络原因造成'
+                        });
+                        console.log(err);
+                    });
+                }).catch(() => {
+
+                });
+            },
+            //设置用户角色
+            setRole(obj) {
+                var self = this;
+                self.currUserID = obj.ID;
+                self.$http.post('/System/GetUserRoles', { userID: obj.ID }).then(function (response) {
+                    if (response.data.Code == 0) {
+                        self.roleIDS = response.data.Data;
+                        self.showRolesSetting = true;
+                    }
+                    else {
+                        self.$message({
+                            type: 'error',
+                            message: response.data.Message
+                        });
+                    }
+                }).catch(function (err) {
+                    self.$message({
+                        type: 'error',
+                        message: '服务异常，可能是网络原因造成'
+                    });
+                })
+
+            },
+            submitSetting() {
+                var self = this;
+                self.submit2Loading = true;
+                self.$http.post('/System/SetUserRoles', { userID: self.currUserID, roleIDS: self.roleIDS }).then(function (response) {
+                    if (response.data.Code == 0) {
+                        self.$message({
+                            type: 'success',
+                            message: response.data.Message + "，用户重新登录之后生效"
+                        });
+                        self.showRolesSetting = false;
+                    }
+                    else {
+                        self.$message({
+                            type: 'error',
+                            message: response.data.Message
+                        });
+                    }
+                    self.submit2Loading = false;
+                }).catch(function (err) {
+                    self.$message({
+                        type: 'error',
+                        message: '服务异常，可能是网络原因造成'
+                    });
+                    self.submit2Loading = false;
+                    console.log(err);
+                });
+
+            },
+            getList() {
+                var self = this;
+                axios.get('/System/GetUserList', { params: self.parm })
+                    .then(function (response) {
+                        self.tableData3 = response.data.rtnMsg.Data
+                        self.roleList = response.data.roleList.Data
+                    })
+                    .catch(function (err) {
+                        console.log(err);
+                    });
+            },
+            search() {
+                this.getList();
+            },
+            submit() {
+                this.$refs["form"].validate((valid) => {
+                    if (valid) {
+                        var self = this;
+                        self.item.Status = self.status ? 0 : -1;
+                        self.submitLoading = true;
+                        if (self.item.CreateTime != undefined)
+                            self.item.CreateTime = self.item.CreateTime.substring(0, self.item.CreateTime.length - 1)
+                        self.$http.post('/System/SaveUser', { data: self.item }).then(function (response) {
+                            if (response.data.Code == 0) {
+                                self.$message({
+                                    type: 'success',
+                                    message: response.data.Message
+                                });
+                                self.dialogFormVisible = false;
+                                self.getList()
+                            }
+                            else {
+                                self.$message({
+                                    type: 'error',
+                                    message: response.data.Message
+                                });
+                            }
+                            self.submitLoading = false;
+                        }).catch(function (err) {
+                            self.$message({
+                                type: 'error',
+                                message: '服务异常，可能是网络原因造成'
+                            });
+                            console.log(err);
+                            self.submitLoading = false;
+                        });
+                    } else {
+                        console.log('error submit!!');
+                        return false;
+                    }
+                });
+            }
+        },
+        filters: {
+            formatDate: function (val) {
+                var value = new Date(val.substring(0, val.length - 1));
+                var year = value.getFullYear();
+                var month = padDate(value.getMonth() + 1);
+                var day = padDate(value.getDate());
+                var hour = padDate(value.getHours());
+                var minutes = padDate(value.getMinutes());
+                var seconds = padDate(value.getSeconds());
+                return year + '-' + month + '-' + day + ' ' + hour + ':' + minutes + ':' + seconds;
+            }
+        },
+        created: function () {
+            this.getList();
+
+        }
+
+    })
+</script>

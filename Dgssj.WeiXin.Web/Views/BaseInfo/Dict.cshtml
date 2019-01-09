@@ -1,0 +1,327 @@
+﻿
+@{
+    ViewData["Title"] = "字典管理";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<section id="roles">
+    <el-card class="box-card">
+        <div slot="header" class="clearfix">
+            <el-form :inline="true" class="demo-form-inline">
+                <el-form-item label="名称">
+                    <el-input placeholder="输入名称" v-model="parm.Name"></el-input>
+                </el-form-item>
+                <el-form-item label="字典类型">
+                    <el-select v-model="parm.typeID" placeholder="请选择字典类型">
+                        <el-option label="请选择" value=""></el-option>
+                        <el-option label="单位字典" value="1"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" icon="el-icon-search" @@click="search">查询</el-button>
+                    <el-button type="success" icon="el-icon-plus" @@click="add">新增</el-button>
+                    <el-button type="danger" icon="el-icon-delete" @@click="deleteMore">批量删除</el-button>
+                </el-form-item>
+            </el-form>
+        </div>
+        <el-table ref="multipleTable" v-loading="loading" border
+                  :data="tableData3.slice((currPage-1)*pagesize,currPage*pagesize)"
+                  tooltip-effect="dark"
+                  style="width: 100%"
+                  @@selection-change="handleSelectionChange">
+            <el-table-column type="selection" width="55"></el-table-column>
+            <el-table-column label="ID" width="60" prop="ID" sortable>
+            </el-table-column>
+            <el-table-column prop="Name" label="名称">
+            </el-table-column>
+            <el-table-column  label="类型">
+                <template slot-scope="scope">
+                    <span>{{ scope.row.State==1?"单位字典":""}}</span>
+                </template>
+            </el-table-column>
+            <el-table-column label="拼写" prop="Spell">
+            </el-table-column>
+            <el-table-column label="值" prop="Value">
+            </el-table-column>
+            <el-table-column label="状态">
+                <template slot-scope="scope">
+                    <span>{{ scope.row.State==1?"启用":"未启用"}}</span>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作">
+                <template slot-scope="scope">
+                    <a href="#" @@click="edit(scope.row)">编辑 </a>&nbsp;
+                    <a href="#" @@click="deleteOne(scope.row)">删除 </a>&nbsp;
+                </template>
+            </el-table-column>
+        </el-table>
+        <br />
+        <div class="block">
+            <el-pagination @@size-change="handleSizeChange"
+                           @@current-change="handleCurrentChange"
+                           :current-page="currPage"
+                           :page-sizes="[5, 10,20]"
+                           :page-size="pagesize"
+                           layout="total, sizes, prev, pager, next, jumper"
+                           :total="tableData3.length">
+            </el-pagination>
+        </div>
+    </el-card>
+    <el-dialog :title="dialogTitle" :visible.sync="dialogFormVisible" width="40%" :close-on-click-modal="false">
+        <el-form ref="form" :model="item" label-width="100px" size="mini" :rules="rules">
+            <el-row>
+                <el-col :span="10">
+                    <el-form-item label="名称：" prop="Name">
+                        <el-input v-model="item.Name"></el-input>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="10" >
+                    <el-form-item label="所属类型：" prop="typeID">
+                        <el-select v-model="item.typeID" placeholder="选择所属类型" style="width:100%">
+                            @*<el-option v-for="(i,index) in parentList" :key="index" :label="i.name" :value="i.id"></el-option>*@
+                            <el-option label="单位字典" value="1"></el-option>
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+
+                <el-col :span="10">
+                    <el-form-item label="编码：">
+                        <el-input v-model="item.Code"></el-input>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="10">
+                    <el-form-item label="拼音：">
+                        <el-input v-model="item.Spell"></el-input>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="10">
+                    <el-form-item label="值：">
+                        <el-input v-model="item.Value"></el-input>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="10">
+                    <el-form-item label="立即启用：">
+                        <el-switch v-model="status"></el-switch>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="20">
+                    <el-form-item label="备注：">
+                        <el-input v-model="item.Notes"></el-input>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @@click="dialogFormVisible=false">关 闭</el-button>
+            <el-button type="primary" @@click="submit" :loading="submitLoading">提 交</el-button>
+        </div>
+    </el-dialog>
+</section>
+<script type="text/javascript">
+    var padDate = function (va) {
+        va = va < 10 ? '0' + va : va;
+        return va
+    }
+    Vue.http.options.emulateJSON = true;
+    var vm_role = new Vue({
+        el: "#roles",
+        data: {
+            tableData3: [],
+            parm: {},
+            multipleSelection: [],
+            currPage: 1,
+            pagesize: 10,
+            loading: false,
+            dialogFormVisible: false,
+            item: {},
+            dialogTitle: "",
+            submitLoading: false,
+            status: false,
+            isEdit: false,
+            rules: {
+                Name: [
+                    {
+                        validator: (rule, value, callback) => {
+                            if (!value) {
+                                return callback(new Error('名称不能为空'));
+                            }
+                            callback();
+                        },
+                        trigger: 'blur'
+                    },
+                ],
+                typeID: [{ required: true, message: '请先选择所属类型', trigger: 'change' }]
+
+            },
+            expandedKeys:[],
+            checkedKeys:[],
+        },
+        methods: {
+            //批量删除
+            deleteMore() {
+                if (this.multipleSelection == 0) {
+                    this.$message.error('请先选择要删除的条目');
+                    return;
+                }
+                this.$confirm('此操作将删除这些数据, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    var self = this;
+                    self.$http.post('/baseinfo/deletedict', { list: self.multipleSelection }).then(function (response) {
+                        if (response.data.Code == 0) {
+                            self.$message({
+                                type: 'success',
+                                message: response.data.Message
+                            });
+                            self.getList();
+                        }
+                        else {
+                            self.$message({
+                                type: 'error',
+                                message: response.data.Message
+                            });
+                        }
+                    }).catch(function (err) {
+                        self.$message({
+                            type: 'error',
+                            message: '服务异常，可能是网络原因造成'
+                        });
+                        console.log(err);
+                    });
+                }).catch(() => {
+
+                });
+            },
+            deleteOne(obj) {
+                this.$confirm('此操作将删除该字典, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    var list = [];
+                    var self = this;
+                    list.push(obj);
+                    self.$http.post('/baseinfo/deletedict', { list: list }).then(function (response) {
+                        if (response.data.Code == 0) {
+                            self.$message({
+                                type: 'success',
+                                message: response.data.Message
+                            });
+                            self.getList();
+                        }
+                        else {
+                            self.$message({
+                                type: 'error',
+                                message: response.data.Message
+                            });
+                        }
+                    }).catch(function (err) {
+                        self.$message({
+                            type: 'error',
+                            message: '服务异常，可能是网络原因造成'
+                        });
+                        console.log(err);
+                    });
+                }).catch(() => {
+
+                });
+            },
+            //checkbox选中事件
+            handleSelectionChange(val) {
+                this.multipleSelection = val;
+            },
+            //改变PageSize
+            handleSizeChange(size) {
+                this.pagesize = size;
+            },
+            //翻页
+            handleCurrentChange(currentPage) {
+                this.currPage = currentPage;
+            },
+            //新增
+            add() {
+                this.dialogTitle = "添加字典";
+                this.dialogFormVisible = true;
+                this.$nextTick(() => {
+                    this.$refs['form'].resetFields(); //此方法需要模态框加载完成后才可以执行
+                    this.isEdit = false;
+                    this.item = {
+                        typeID: ""
+                    };
+                    this.status = true;
+                })
+               
+
+            },
+            //修改
+            edit(obj) {
+                this.isEdit = true;
+                this.dialogTitle = "编辑字典";
+                this.dialogFormVisible = true;
+                this.$nextTick(() => {
+                    this.item = JSON.parse(JSON.stringify(obj));
+                    this.status = this.item.State == 1
+                    this.item.typeID = this.item.typeID == 1 ? "1" : "0"
+                    this.$refs['form'].resetFields(); //此方法需要模态框加载完成后才可以执行
+                })
+           
+            },
+            getList() {
+                var self = this;
+                axios.get('/baseinfo/getdictlist', { params: self.parm })
+                    .then(function (response) {
+                        self.tableData3 = response.data.Data;
+                    })
+                    .catch(function (err) {
+                        console.log(err);
+                    });
+            },
+            search() {
+                this.getList();
+            },
+            submit() {
+                this.$refs["form"].validate((valid) => {
+                    if (valid) {
+                        var self = this;
+                        self.item.State= self.status ? 1: 0;
+                        self.submitLoading = true;
+                        self.$http.post('/baseinfo/savedict', { data: self.item }).then(function (response) {
+                            if (response.data.Code == 0) {
+                                self.$message({
+                                    type: 'success',
+                                    message: response.data.Message
+                                });
+                                self.dialogFormVisible = false;
+                                self.getList()
+                            }
+                            else {
+                                self.$message({
+                                    type: 'error',
+                                    message: response.data.Message
+                                });
+                            }
+                            self.submitLoading = false;
+                        }).catch(function (err) {
+                            self.$message({
+                                type: 'error',
+                                message: '服务异常，可能是网络原因造成'
+                            });
+                            console.log(err);
+                            self.submitLoading = false;
+                        });
+                    } else {
+                        console.log('error submit!!');
+                        return false;
+                    }
+                });
+            },
+        },
+        created: function () {
+            this.getList();
+
+        }
+
+    })
+</script>
+

@@ -1,0 +1,376 @@
+﻿
+@{
+    ViewData["Title"] = "角色管理";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section id="roles">
+    <el-card class="box-card">
+        <div slot="header" class="clearfix">
+            <el-form :inline="true" class="demo-form-inline">
+                <el-form-item label="角色名称">
+                    <el-input placeholder="输入角色名称" v-model="parm.RoleName"></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" icon="el-icon-search" @@click="search">查询</el-button>
+                    <el-button type="success" icon="el-icon-plus" @@click="add">新增</el-button>
+                    <el-button type="danger" icon="el-icon-delete" @@click="deleteMore">批量删除</el-button>
+                </el-form-item>
+            </el-form>
+        </div>
+        <el-table ref="multipleTable" v-loading="loading" border
+                  :data="tableData3.slice((currPage-1)*pagesize,currPage*pagesize)"
+                  tooltip-effect="dark"
+                  style="width: 100%"
+                  @@selection-change="handleSelectionChange">
+            <el-table-column type="selection" width="55"></el-table-column>
+            <el-table-column label="ID" width="60" prop="ID" sortable>
+            </el-table-column>
+            <el-table-column prop="RoleName" label="角色名称">
+            </el-table-column>
+            <el-table-column label="描述" prop="Description">
+            </el-table-column>
+            <el-table-column label="编辑者" prop="UserRealName">
+            </el-table-column>
+            <el-table-column label="状态">
+                <template slot-scope="scope">
+                    <span>{{ scope.row.Status==0?"启用":"未启用"}}</span>
+                </template>
+            </el-table-column>
+            <el-table-column label="创建时间">
+                <template slot-scope="scope">
+                    <span>{{ scope.row.CreateTime|formatDate}}</span>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作">
+                <template slot-scope="scope">
+                    <a href="#" @@click="edit(scope.row)">编辑 </a>&nbsp;
+                    <a href="#" @@click="deleteOne(scope.row)">删除 </a>&nbsp;
+                    <a href="#" @@click="openSetting(scope.row)" title="设置角色的系统权限">权限 </a>&nbsp;
+                </template>
+            </el-table-column>
+        </el-table>
+        <br />
+        <div class="block">
+            <el-pagination @@size-change="handleSizeChange"
+                           @@current-change="handleCurrentChange"
+                           :current-page="currPage"
+                           :page-sizes="[5, 10,20]"
+                           :page-size="pagesize"
+                           layout="total, sizes, prev, pager, next, jumper"
+                           :total="tableData3.length">
+            </el-pagination>
+        </div>
+    </el-card>
+    <el-dialog :title="dialogTitle" :visible.sync="dialogFormVisible" width="30%" :close-on-click-modal="false">
+        <el-form ref="form" :model="item" label-width="80px" size="mini" :rules="rules">
+            <el-form-item label="角色名称" prop="RoleName">
+                <el-input v-model="item.RoleName"></el-input>
+            </el-form-item>
+            <el-form-item label="描述">
+                <el-input type="textarea" v-model="item.Description"></el-input>
+            </el-form-item>
+            <el-form-item label="立即启用" prop="delivery">
+                <el-switch v-model="status"></el-switch>
+            </el-form-item>
+
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @@click="dialogFormVisible=false">关 闭</el-button>
+            <el-button type="primary" @@click="submit" :loading="submitLoading">提 交</el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="角色权限设置" :visible.sync="showMenuSetting" width="30%" :close-on-click-modal="false">
+        <el-tree :data="menuList" ref="tree" :check-on-click-node="1==1"
+                 show-checkbox
+                 node-key="id"
+                 :default-expanded-keys="expandedKeys"
+                 :default-checked-keys="checkedKeys">
+        </el-tree>
+        <div slot="footer" class="dialog-footer">
+            <el-button @@click="showMenuSetting=false">关 闭</el-button>
+            <el-button type="primary" @@click="submitSetting" :loading="submit2Loading">提 交</el-button>
+        </div>
+    </el-dialog>
+</section>
+<script type="text/javascript">
+    var padDate = function (va) {
+        va = va < 10 ? '0' + va : va;
+        return va
+    }
+    Vue.http.options.emulateJSON = true;
+    var vm_role = new Vue({
+        el: "#roles",
+        data: {
+            tableData3: [],
+            parm: {},
+            multipleSelection: [],
+            currPage: 1,
+            pagesize: 10,
+            loading: false,
+            dialogFormVisible: false,
+            item: {},
+            dialogTitle: "",
+            submitLoading: false,
+            status: false,
+            isEdit: false,
+            rules: {
+                RoleName: [
+                    {
+                        validator: (rule, value, callback) => {
+                            if (!value) {
+                                return callback(new Error('角色名不能为空'));
+                            }
+                            callback();
+                        },
+                        trigger: 'blur'
+                    },
+                ],
+            },
+            showMenuSetting: false,
+            submit2Loading: false,
+            currRoleID: "",
+            menusId: [],
+            menuList: [],
+            expandedKeys: [],
+            checkedKeys: [],
+        },
+        methods: {
+            //批量删除
+            deleteMore() {
+                if (this.multipleSelection == 0) {
+                    this.$message.error('请先选择要删除的条目');
+                    return;
+                }
+                this.$confirm('此操作将删除这些数据, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    var self = this;
+                    self.$http.post('/System/DeleteRoles', { list: self.multipleSelection }).then(function (response) {
+                        if (response.data.Code == 0) {
+                            self.$message({
+                                type: 'success',
+                                message: response.data.Message
+                            });
+                            self.getList();
+                        }
+                        else {
+                            self.$message({
+                                type: 'error',
+                                message: response.data.Message
+                            });
+                        }
+                    }).catch(function (err) {
+                        self.$message({
+                            type: 'error',
+                            message: '服务异常，可能是网络原因造成'
+                        });
+                        console.log(err);
+                    });
+                }).catch(() => {
+
+                });
+            },
+            deleteOne(obj) {
+                this.$confirm('此操作将删除该角色, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    var list = [];
+                    var self = this;
+                    list.push(obj);
+                    self.$http.post('/System/DeleteRoles', { list: list }).then(function (response) {
+                        if (response.data.Code == 0) {
+                            self.$message({
+                                type: 'success',
+                                message: response.data.Message
+                            });
+                            self.getList();
+                        }
+                        else {
+                            self.$message({
+                                type: 'error',
+                                message: response.data.Message
+                            });
+                        }
+                    }).catch(function (err) {
+                        self.$message({
+                            type: 'error',
+                            message: '服务异常，可能是网络原因造成'
+                        });
+                        console.log(err);
+                    });
+                }).catch(() => {
+
+                });
+            },
+            //checkbox选中事件
+            handleSelectionChange(val) {
+                this.multipleSelection = val;
+            },
+            //改变PageSize
+            handleSizeChange(size) {
+                this.pagesize = size;
+            },
+            //翻页
+            handleCurrentChange(currentPage) {
+                this.currPage = currentPage;
+            },
+            openSetting(obj) {
+                var self = this;
+                self.currRoleID = obj.ID;
+
+                self.$http.post('/System/GetModuleListByRole', { roleID: obj.ID }).then(function (response) {
+                    if (response.data.Code == 0) {
+                        //self.$nextTick(function () {
+                        self.showMenuSetting = true;
+                        if (self.$refs.tree == undefined) {
+                            self.checkedKeys = response.data.Data;
+                            return;
+                        }
+                        self.$refs.tree.setCheckedKeys(response.data.Data);
+                        //})
+
+                    }
+                    else {
+                        self.$message({
+                            type: 'error',
+                            message: response.data.Message
+                        });
+                    }
+                }).catch(function (err) {
+                    self.$message({
+                        type: 'error',
+                        message: '服务异常，可能是网络原因造成'
+                    });
+                })
+            },
+            //新增
+            add() {
+                this.isEdit = false;
+                this.dialogFormVisible = true;
+                this.$nextTick(() => {
+                    this.$refs['form'].resetFields(); //此方法需要模态框加载完成后才可以执行
+                    this.item = {};
+                    this.status = false;
+                })
+                this.dialogTitle = "添加角色";
+            },
+            //修改
+            edit(obj) {
+                this.isEdit = true;
+                this.dialogTitle = "编辑角色";
+                this.dialogFormVisible = true;
+                this.$nextTick(() => {
+                    this.item = JSON.parse(JSON.stringify(obj));
+                    this.item.CreateTime = this.item.CreateTime.substring(0, this.item.CreateTime.length - 1);
+                    this.status = this.item.Status == 0
+                    this.$refs['form'].resetFields(); //此方法需要模态框加载完成后才可以执行
+                })
+            },
+            getList() {
+                var self = this;
+                axios.get('/System/GetRoleList', { params: self.parm })
+                    .then(function (response) {
+                        self.tableData3 = response.data.rtnMsg.Data;
+                        self.menuList = response.data.list.Data;
+                        for (var i = 0; i < self.menuList.length; i++) {
+                            self.expandedKeys.push(self.menuList[i].id);
+                        }
+                    })
+                    .catch(function (err) {
+                        console.log(err);
+                    });
+            },
+            search() {
+                this.getList();
+            },
+            submit() {
+                this.$refs["form"].validate((valid) => {
+                    if (valid) {
+                        var self = this;
+                        self.item.Status = self.status ? 0 : -1;
+                        self.submitLoading = true;
+                        self.$http.post('/System/SaveRole', { data: self.item }).then(function (response) {
+                            if (response.data.Code == 0) {
+                                self.$message({
+                                    type: 'success',
+                                    message: response.data.Message
+                                });
+                                self.dialogFormVisible = false;
+                                self.getList()
+                            }
+                            else {
+                                self.$message({
+                                    type: 'error',
+                                    message: response.data.Message
+                                });
+                            }
+                            self.submitLoading = false;
+                        }).catch(function (err) {
+                            self.$message({
+                                type: 'error',
+                                message: '服务异常，可能是网络原因造成'
+                            });
+                            console.log(err);
+                            self.submitLoading = false;
+                        });
+                    } else {
+                        console.log('error submit!!');
+                        return false;
+                    }
+                });
+            },
+            submitSetting() {
+                var self = this;
+                //var list = self.$refs.tree.getHalfCheckedKeys();
+                var list = [];
+                list = list.concat(self.$refs.tree.getCheckedKeys());
+                self.submit2Loading = true;
+                self.$http.post('/System/SetRoleMenu', { roleID: self.currRoleID, menuids: list }).then(function (response) {
+                    if (response.data.Code == 0) {
+                        self.$message({
+                            type: 'success',
+                            message: response.data.Message
+                        });
+                        self.showMenuSetting = false;
+                    }
+                    else {
+                        self.$message({
+                            type: 'error',
+                            message: response.data.Message
+                        });
+                    }
+                    self.submit2Loading = false;
+                }).catch(function (err) {
+                    self.$message({
+                        type: 'error',
+                        message: '服务异常，可能是网络原因造成'
+                    });
+                    self.submit2Loading = false;
+                    console.log(err);
+                });
+            }
+        },
+        filters: {
+            formatDate: function (val) {
+                var value = new Date(val);
+                var year = value.getFullYear();
+                var month = padDate(value.getMonth() + 1);
+                var day = padDate(value.getDate());
+                var hour = padDate(value.getHours());
+                var minutes = padDate(value.getMinutes());
+                var seconds = padDate(value.getSeconds());
+                return year + '-' + month + '-' + day + ' ' + hour + ':' + minutes + ':' + seconds;
+            }
+        },
+        created: function () {
+            this.getList();
+
+        }
+
+    })
+</script>

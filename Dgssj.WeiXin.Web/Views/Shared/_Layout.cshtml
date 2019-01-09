@@ -1,0 +1,198 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - 鼎格舒适家</title>
+    <link href="~/lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+    <link href="~/lib/ltedist/css/AdminLTE.css" rel="stylesheet" />
+    <link href="~/lib/ltedist/css/skins/_all-skins.css" rel="stylesheet" />
+    <link href="~/css/site.css" rel="stylesheet" />
+    <link href="~/css/mescroll.css" rel="stylesheet" />
+    <link href="~/css/help.css" rel="stylesheet" />
+    <link href="~/lib/element-ui/lib/theme-chalk/index.css" rel="stylesheet" />
+    <link href="~/lib/font/css/font-awesome.css" rel="stylesheet" />
+    <script src="~/lib/jquery/dist/jquery.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.js"></script>
+    <script src="~/lib/vue/vue.js"></script>
+    <script src="~/lib/vue/axiso.min.js"></script>
+    <script src="~/lib/vue/vue-resource.js"></script>
+    <script src="~/lib/element-ui/lib/index.js"></script>
+    <script src="~/lib/ltedist/js/adminlte.js"></script>
+    <script src="~/js/site.js"></script>
+
+</head>
+<body class="hold-transition skin-blue sidebar-mini" >
+    <div class="wrapper">
+        <div id="app">
+            @using System.Security.Claims
+            @using Dgssj.WeiXin.Model
+            @if (User.Identity.Name != "")
+            {
+                var cliams = Newtonsoft.Json.JsonConvert.DeserializeObject<UserClaims>(User.FindFirst(ClaimTypes.AuthorizationDecision).Value);
+                var _user = Newtonsoft.Json.JsonConvert.SerializeObject(cliams.users);
+                <input type="hidden" value="@_user" id="hid" />
+                @*头部*@
+                @Html.Partial("_Layout_Partial/_Layout_Header")
+                @*左边菜单*@
+                @Html.Partial("_Layout_Partial/_Layout_LeftSide")
+            }
+        </div>
+        <div class="content-wrapper">
+            <section class="content-header">
+                <h5>
+                    <a href="/Home/Index"><i class="glyphicon glyphicon-home"></i> 首页</a> >
+                    <small>@ViewBag.Title</small>
+                </h5>
+            </section>
+            <section class="content">
+                @RenderBody()
+            </section>
+        </div>
+
+        <footer class="main-footer">
+            <div class="pull-right hidden-xs">
+                <b>Version</b>1.0.0
+            </div>
+            <strong>Copyright &copy; @DateTime.Now.Year Wolters Kluwer | Medicom Co., Ltd. 版权所有      |      蜀ICP备13006786号</strong>
+        </footer>
+    </div>
+    <script>
+        Vue.config.productionTip = false;
+        Vue.http.options.emulateJSON = true;
+        var app = new Vue({
+            el: "#app",
+            data: {
+                Asid_height: 0,
+                isCollapse: false,
+                defalut_open: [],
+                defalut_active: "",
+                dialogProVisible: false,
+                curuser: {},
+                submitLoading: false,
+                pwd: {},
+                submitLoadingPwd: false,
+                rules: {
+                    RealName: [{ required: true, message: '姓名不能为空', trigger: 'blur' }]
+                },
+                rulesPwd: {
+                    oldpassword: [{ required: true, message: '原密码不能为空', trigger: 'blur' }],
+                    newpassword: [{ required: true, message: '请输入新密码', trigger: 'blur' }],
+                    renewpassword: [{
+                        validator: (rule, value, callback) => {
+                            if (value === '' || value === undefined) {
+                                callback(new Error('请再次输入密码'));
+                            } else if (value !== app.pwd.newpassword) {
+                                callback(new Error('两次输入密码不一致!'));
+                            } else {
+                                callback();
+                            }
+                        },
+                        trigger: 'blur'
+                    }]
+                }
+            },
+            methods: {
+                cosp() {
+
+                    this.isCollapse = !this.isCollapse;
+                },
+                changmenu(id, pid) {
+                    localStorage.id = id;
+                    localStorage.pid = pid;
+
+                },
+                openProfile() {
+                    var self = this;
+                    self.dialogProVisible = true;
+                    axios.get('/System/getuserinfo', { params: self.parm })
+                        .then(function (response) {
+                            self.curuser = response.data.Data
+                            self.curuser.Sex = self.curuser.Sex == 1 ? "1" : "2";
+                        })
+                        .catch(function (err) {
+                            console.log(err);
+                        });
+                },
+                submit() {
+                    this.$refs["form"].validate((valid) => {
+                        if (valid) {
+                            var self = this;
+                            self.submitLoading = true;
+                            self.$http.post('/System/SaveUserAtIndex', { data: self.curuser }).then(function (response) {
+                                if (response.data.Code == 0) {
+                                    self.$message({
+                                        type: 'success',
+                                        message: response.data.Message
+                                    });
+                                    //self.dialogFormVisible = false;
+                                }
+                                else {
+                                    self.$message({
+                                        type: 'error',
+                                        message: response.data.Message
+                                    });
+                                }
+                                self.submitLoading = false;
+                            }).catch(function (err) {
+                                self.$message({
+                                    type: 'error',
+                                    message: '服务异常，可能是网络原因造成'
+                                });
+                                console.log(err);
+                                self.submitLoading = false;
+                            });
+                        } else {
+                            console.log('error submit!!');
+                            return false;
+                        }
+                    });
+                },
+                submitPwd() {
+                    this.$refs["pwdform"].validate((valid) => {
+                        if (valid) {
+                            var self = this;
+                            self.submitLoading = true;
+                            self.$http.post('/System/ModifyPwd', { pwd: self.pwd.oldpassword, newpwd: self.pwd.newpassword }).then(function (response) {
+                                if (response.data.Code == 0) {
+                                    self.$message({
+                                        type: 'success',
+                                        message: response.data.Message
+                                    });
+                                    self.dialogProVisible = false;
+                                }
+                                else {
+                                    self.$message({
+                                        type: 'error',
+                                        message: response.data.Message
+                                    });
+                                }
+                                self.submitLoading = false;
+                            }).catch(function (err) {
+                                self.$message({
+                                    type: 'error',
+                                    message: '服务异常，可能是网络原因造成'
+                                });
+                                console.log(err);
+                                self.submitLoading = false;
+                            });
+                        } else {
+                            console.log('error submit!!');
+                            return false;
+                        }
+                    });
+
+                },
+            },
+            created: function () {
+                var self = this;
+                var height = $(window).height();
+                self.Asid_height = height + self.Asid_height + "px";
+                this.defalut_active = localStorage.id == undefined ? "" : localStorage.id
+            }
+        })
+    </script>
+    @RenderSection("Scripts", required: false)
+
+</body>
+</html>

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Dgssj.WeiXin.DAL\Dgssj.WeiXin.DAL.csproj" />
+    <ProjectReference Include="..\Dgssj.WeiXin.Model\Dgssj.WeiXin.Model.csproj" />
+  </ItemGroup>
+
+</Project>

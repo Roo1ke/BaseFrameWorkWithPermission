@@ -1,0 +1,72 @@
+﻿@using System.Security.Claims
+@using Dgssj.WeiXin.Model
+@if (@User.Identity.Name != "")
+{
+    var cliamss = Newtonsoft.Json.JsonConvert.DeserializeObject<UserClaims>(User.FindFirst(ClaimTypes.AuthorizationDecision).Value);
+    var parentList = new List<SysModule>();
+    var sonList = new List<SysModule>();
+    if (cliamss.menusList != null)
+    {
+        parentList = cliamss.menusList.Where(e => e.ParentId == 0).ToList();
+        sonList = cliamss.menusList.Where(e => e.ParentId != 0).ToList();
+    }
+
+
+    <aside class="main-sidebar" id="MISMenu">
+        <section class="sidebar" style="height: auto;">
+            <div class="user-panel">
+                <div class="pull-left image">
+                    <img src="~/images/avatar5.png" class="img-circle" alt="User Image">
+                </div>
+                <div class="pull-left info">
+                    <p>@User.Identity.Name</p>
+                    <a href="#"><i class="fa fa-circle text-success"></i>在线</a>
+                </div>
+            </div>
+            <ul class="sidebar-menu tree" data-widget="tree">
+                <li class="header">后台管理系统功能菜单</li>
+            </ul>
+            <el-menu class="sidebar-menu tree" :collapse="isCollapse" :default-openeds="defalut_open"
+                     :default-active="defalut_active " ref="menus" unique-opened>
+                @foreach (var item in parentList)
+                {
+                    <el-submenu index="@item.Id">
+                        <template slot="title">
+                            <i class="@item.Icon"></i>&nbsp;
+                            <span>@item.ModuleName</span>
+                        </template>
+                        <el-menu-item-group>
+                            @foreach (var i in sonList)
+                            {
+                                @if (i.ParentId == item.Id)
+                                {
+                                    <a href=@i.Url @@click="changmenu(@i.Id,@i.ParentId)">
+                                        <el-menu-item index="@i.Id" class="flag">
+                                            <i class="fa fa-circle-o"></i>&nbsp;
+                                            @i.ModuleName
+                                        </el-menu-item>
+                                    </a>
+                                }
+                            }
+                        </el-menu-item-group>
+                    </el-submenu>
+                }
+                @*<el-submenu index="1">
+                        <template slot="title">
+                            <i class="el-icon-setting"></i>
+                            <span>系统管理</span>
+                        </template>
+                        <el-menu-item-group>
+                            <a href="/System/Users">
+                                <el-menu-item index="user">用户管理</el-menu-item>
+                            </a>
+                            <a href="/System/Roles">
+                                <el-menu-item index="user">角色管理</el-menu-item>
+                            </a>
+                        </el-menu-item-group>
+                    </el-submenu>*@
+            </el-menu>
+        </section>
+    </aside>
+
+}

@@ -1,0 +1,111 @@
+﻿<header class="main-header">
+    <!-- Logo -->
+    <a href="/Home/Index" class="logo" style="text-decoration:none" id="logo_click">
+        <span class="logo-mini">DGSSJ</span>
+        <span class="logo-lg"><b>鼎格舒适家</b></span>
+    </a>
+    <!-- Header Navbar: style can be found in header.less -->
+    <nav class="navbar navbar-static-top" role="navigation">
+        <a href="#" class="sidebar-toggle" data-toggle="push-menu" role="button" @@click="cosp">
+            <span class="sr-only">Toggle navigation</span>
+        </a>
+        <div class="navbar-custom-menu">
+            <ul class="nav navbar-nav">
+                <li class="dropdown tasks-menu">
+                    <a href="#" class="dropdown-toggle">
+                        <i class="fa fa-clock-o">&nbsp;&nbsp;&nbsp;@DateTime.Now.ToString("yyyy年MM月dd日") </i>
+                    </a>
+                </li>
+                <!-- User Account Menu -->
+                <li class="dropdown user user-menu">
+                    <!-- Menu Toggle Button -->
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                        <!-- The user image in the navbar-->
+                        <img src="~/images/avatar5.png" class="user-image" alt="User Image">
+                        <!-- hidden-xs hides the username on small devices so only the image appears. -->
+                        <span class="hidden-xs">@User.Identity.Name</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <!-- The user image in the menu -->
+                        <li class="user-header">
+                            <img src="~/images/avatar5.png" class="img-circle" alt="User Image">
+
+                            <p>
+                                @User.Identity.Name
+                                @*<small>Member since Nov. 2012</small>*@
+                            </p>
+                        </li>
+                        <!-- Menu Body -->
+                        @*<li class="user-body">
+                                <div class="row">
+                                    <div class="col-xs-4 text-center">
+                                        <a href="#">Followers</a>
+                                    </div>
+                                    <div class="col-xs-4 text-center">
+                                        <a href="#">Sales</a>
+                                    </div>
+                                    <div class="col-xs-4 text-center">
+                                        <a href="#">Friends</a>
+                                    </div>
+                                </div>
+                            </li>*@
+                        <!-- Menu Footer-->
+                        <li class="user-footer">
+                            <div class="pull-left">
+                                <a href="#" class="btn btn-default btn-flat" @@click="openProfile">个人中心</a>
+                            </div>
+                            <div class="pull-right">
+                                <a href="/Account/LogOut" class="btn btn-default btn-flat">注销</a>
+                            </div>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</header>
+
+    <el-dialog title="个人中心" :visible.sync="dialogProVisible" width="30%" :close-on-click-modal="false">
+        <el-tabs tab-position="left">
+            <el-tab-pane label="基本信息">
+                <el-form ref="form" :model="curuser" label-width="100px" size="mini" :rules="rules">
+                    <el-form-item label="用户名" prop="UserName">
+                        <el-input v-model="curuser.UserName" readonly></el-input>
+                    </el-form-item>
+                    <el-form-item label="姓名" prop="RealName">
+                        <el-input v-model="curuser.RealName"></el-input>
+                    </el-form-item>
+                    <el-form-item label="性别">
+                        <el-radio-group v-model="curuser.Sex">
+                            <el-radio label=1>男</el-radio>
+                            <el-radio label=2>女</el-radio>
+                        </el-radio-group>
+                    </el-form-item>
+                    <el-form-item label="电话号码">
+                        <el-input v-model="curuser.Phone"></el-input>
+                    </el-form-item>
+                </el-form>
+                <div class="pull-right">
+                    <el-button @@click="dialogProVisible=false">关 闭</el-button>
+                    <el-button type="primary" @@click="submit" :loading="submitLoading">提 交</el-button>
+                </div>
+            </el-tab-pane>
+            <el-tab-pane label="修改密码">
+                <el-form ref="pwdform" :model="pwd" label-width="100px" size="mini" :rules="rulesPwd">
+                    <el-form-item label="原密码" prop="oldpassword">
+                        <el-input v-model="pwd.oldpassword" type="password"></el-input>
+                    </el-form-item>
+                    <el-form-item label="新密码" prop="newpassword">
+                        <el-input v-model="pwd.newpassword" type="password"></el-input>
+                    </el-form-item>
+                    <el-form-item label="重复新密码" prop="renewpassword">
+                        <el-input v-model="pwd.renewpassword" type="password"></el-input>
+                    </el-form-item>
+                </el-form>
+                <div class="pull-right">
+                    <el-button @@click="dialogProVisible=false">关 闭</el-button>
+                    <el-button type="primary" @@click="submitPwd" :loading="submitLoadingPwd">提 交</el-button>
+                </div>
+            </el-tab-pane>
+        </el-tabs>
+    </el-dialog>
